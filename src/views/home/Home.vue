@@ -1,7 +1,13 @@
 <template>
   <div id="home">
     <nav-bar class="home-nav"><div slot="center">购物车</div></nav-bar>
-    <scroll class="content">
+    <scroll
+      class="content"
+      ref="scroll"
+      :probe-type="3"
+      @scroll="contentScroll"
+      :pull-up-load="true"
+      @pullingUp="loadMore">
       <home-swiper :banners="banners" />
       <recommend-view :recommends="recommends" />
       <feature-view />
@@ -12,6 +18,7 @@
       />
       <goods-list :goods="showGoods" />
     </scroll>
+    <back-top @click.native="backClick" v-show="isShow" />
   </div>
 </template>
 
@@ -20,6 +27,7 @@
   import TabControl from "components/content/tabControl/TabControl";
   import GoodsList from "components/content/goods/GoodsList";
   import Scroll from "components/common/scroll/Scroll";
+  import BackTop from "components/content/backTop/BackTop";
 
   import HomeSwiper from './childComps/HomeSwiper'
   import RecommendView from './childComps/RecommendView'
@@ -36,7 +44,8 @@
       FeatureView,
       TabControl,
       GoodsList,
-      Scroll
+      Scroll,
+      BackTop,
     },
     data() {
       return {
@@ -47,7 +56,8 @@
           'new': {page: 0, list: []},
           'sell': {page: 0, list: []}
         },
-        currentType: 'pop'
+        currentType: 'pop',
+        isShow: false,
       }
 
     },
@@ -61,6 +71,12 @@
       this.getHomeGoods('pop');
       this.getHomeGoods('new');
       this.getHomeGoods('sell');
+    },
+    mounted() {
+      //监听组件通信
+      this.$bus.$on('itemImageLoad', () => {
+        this.$refs.scroll.refresh();
+      })
     },
     methods: {
       /**
@@ -79,6 +95,18 @@
         }
       },
 
+      backClick() {
+        this.$refs.scroll.scrollTo(0, 0);
+      },
+
+      contentScroll(position) {
+        this.isShow = -position.y > 1000;
+      },
+
+      loadMore() {
+        this.getHomeGoods(this.currentType);
+      },
+
       /**
        * 网络请求相关的方法
        */
@@ -93,6 +121,8 @@
         getHomeGoods(type, page).then(res => {
           this.goods[type].list.push(...res.data.list)
           this.goods[type].page += 1
+
+          this.$refs.scroll.scroll.finishPullUp();
         })
       }
     }
